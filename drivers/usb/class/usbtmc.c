@@ -459,13 +459,13 @@ static ssize_t usbtmc_read(struct file *filp, char __user *buf,
 			       (buffer[7] << 24);
 
 		/* Ensure the instrument doesn't lie about it */
-		if(n_characters > actual - 12) {
+		if (n_characters > actual - 12) {
 			dev_err(dev, "Device lies about message size: %u > %d\n", n_characters, actual - 12);
 			n_characters = actual - 12;
 		}
 
 		/* Ensure the instrument doesn't send more back than requested */
-		if(n_characters > this_part) {
+		if (n_characters > this_part) {
 			dev_err(dev, "Device returns more than requested: %zu > %zu\n", done + n_characters, done + this_part);
 			n_characters = this_part;
 		}
