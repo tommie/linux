@@ -80,6 +80,8 @@ struct usbtmc_device_data {
 	unsigned int bulk_in;
 	unsigned int bulk_out;
 
+	u16 wMaxPacketSize_bulk_in;
+
 	u8 bTag;
 	u8 bTag_last_write;	/* needed for abort */
 	u8 bTag_last_read;	/* needed for abort */
@@ -147,7 +149,6 @@ static int usbtmc_ioctl_abort_bulk_in(struct usbtmc_device_data *data)
 	int rv;
 	int n;
 	int actual;
-	struct usb_host_interface *current_setting;
 	int max_size;
 
 	dev = &data->intf->dev;
@@ -181,21 +182,7 @@ static int usbtmc_ioctl_abort_bulk_in(struct usbtmc_device_data *data)
 		goto exit;
 	}
 
-	max_size = 0;
-	current_setting = data->intf->cur_altsetting;
-	for (n = 0; n < current_setting->desc.bNumEndpoints; n++)
-		if (current_setting->endpoint[n].desc.bEndpointAddress ==
-			data->bulk_in)
-			max_size = usb_endpoint_maxp(&current_setting->endpoint[n].desc);
-
-	if (max_size == 0) {
-		dev_err(dev, "Couldn't get wMaxPacketSize\n");
-		rv = -EPERM;
-		goto exit;
-	}
-
-	dev_dbg(&data->intf->dev, "wMaxPacketSize is %d\n", max_size);
-
+	max_size = data->wMaxPacketSize_bulk_in;
 	n = 0;
 
 	do {
@@ -591,8 +578,6 @@ exit:
 
 static int usbtmc_ioctl_clear(struct usbtmc_device_data *data)
 {
-	struct usb_host_interface *current_setting;
-	struct usb_endpoint_descriptor *desc;
 	struct device *dev;
 	u8 *buffer;
 	int rv;
@@ -626,22 +611,7 @@ static int usbtmc_ioctl_clear(struct usbtmc_device_data *data)
 		goto exit;
 	}
 
-	max_size = 0;
-	current_setting = data->intf->cur_altsetting;
-	for (n = 0; n < current_setting->desc.bNumEndpoints; n++) {
-		desc = &current_setting->endpoint[n].desc;
-		if (desc->bEndpointAddress == data->bulk_in)
-			max_size = usb_endpoint_maxp(desc);
-	}
-
-	if (max_size == 0) {
-		dev_err(dev, "Couldn't get wMaxPacketSize\n");
-		rv = -EPERM;
-		goto exit;
-	}
-
-	dev_dbg(dev, "wMaxPacketSize is %d\n", max_size);
-
+	max_size = data->wMaxPacketSize_bulk_in;
 	n = 0;
 
 usbtmc_clear_check_status:
@@ -1031,6 +1001,7 @@ static int usbtmc_probe(struct usb_interface *intf,
 
 		if (usb_endpoint_is_bulk_in(endpoint)) {
 			data->bulk_in = endpoint->bEndpointAddress;
+			data->wMaxPacketSize_bulk_in = usb_endpoint_maxp(endpoint);
 			dev_dbg(&intf->dev, "Found bulk in endpoint at %u\n",
 				data->bulk_in);
 			break;
