@@ -457,6 +457,10 @@ static ssize_t usbtmc_read(struct file *filp, char __user *buf,
 			n_characters = this_part;
 		}
 
+		if (actual - 12 > this_part) {
+			dev_err(dev, "Device returns more actual than requested: %d > %zu\n", actual - 12, this_part);
+		}
+
 		/* Copy buffer to user space */
 		if (copy_to_user(buf + done, &buffer[12], n_characters)) {
 			/* There must have been an addressing problem */
