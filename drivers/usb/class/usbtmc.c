@@ -439,6 +439,13 @@ static ssize_t usbtmc_read(struct file *filp, char __user *buf,
 			goto exit;
 		}
 
+		if (buffer[1] != data->bTag_last_write || buffer[2] != (u8) ~(data->bTag_last_write)) {
+			dev_err(dev, "Device sent reply with wrong tag: %d (~%d) != %d\n", buffer[1], buffer[2], data->bTag_last_write);
+			if (data->auto_abort)
+				usbtmc_ioctl_abort_bulk_in(data);
+			goto exit;
+		}
+
 		/* How many characters did the instrument send? */
 		n_characters = buffer[4] +
 			       (buffer[5] << 8) +
